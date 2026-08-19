@@ -8,6 +8,7 @@ const webSocketServer = new WebSocketServer({ server });
 const rooms = new Map();
 const PORT = process.env.PORT || 3001;
 
+app.get('/', (_request, response) => response.send('Our Space server is running. Open the deployed frontend to use the chat.'));
 app.get('/health', (_request, response) => response.json({ ok: true, runtimeOnly: true }));
 
 function getRoom(roomCode) {
