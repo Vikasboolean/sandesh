@@ -21,12 +21,22 @@ export default function MessageInput({ onSend, onSendImage, onTyping, disabled }
   const handleFile = (event) => {
     const file = event.target.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
-    if (file.size > 6 * 1024 * 1024) {
-      window.alert('Please choose an image smaller than 6 MB.');
-      return;
-    }
     const reader = new FileReader();
-    reader.onload = () => onSendImage({ fileName: file.name, mimeType: file.type, data: reader.result });
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        const maxDimension = 1600;
+        const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        onSendImage({ fileName: file.name, mimeType: 'image/jpeg', data: canvas.toDataURL('image/jpeg', .82) });
+      };
+      image.onerror = () => window.alert('This image could not be prepared for sending.');
+      image.src = reader.result;
+    };
+    reader.onerror = () => window.alert('This image could not be read.');
     reader.readAsDataURL(file);
     event.target.value = '';
   };
