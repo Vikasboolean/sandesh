@@ -21,6 +21,29 @@ async function configureSender(sender, encodingOptions) {
   await sender.setParameters(parameters);
 }
 
+async function requestCallMedia() {
+  if (!window.isSecureContext) {
+    const error = new Error('Camera and microphone access requires a secure page.');
+    error.name = 'InsecureContextError';
+    throw error;
+  }
+  if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) {
+    const error = new Error('Video calls are not supported by this browser.');
+    error.name = 'NotSupportedError';
+    throw error;
+  }
+  return navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS);
+}
+
+function getCallMediaErrorMessage(error, action) {
+  if (error.name === 'InsecureContextError') return 'Open Our Space over HTTPS on your phone to allow camera and microphone access.';
+  if (error.name === 'NotSupportedError') return 'Video calling is not supported by this browser.';
+  if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') return `Allow camera and microphone access in your browser to ${action}.`;
+  if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') return 'No camera or microphone was found on this device.';
+  if (error.name === 'NotReadableError' || error.name === 'TrackStartError') return 'The camera or microphone may be in use by another app.';
+  return `Could not ${action}.`;
+}
+
 function LoginScreen({ onJoin }) {
   const [name, setName] = useState('');
   const [roomCode, setRoomCode] = useState('');
@@ -154,14 +177,10 @@ export default function App() {
   };
 
   const startCall = async () => {
-    if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) {
-      setCallError('Video calling is not supported by this browser.');
-      return;
-    }
     setCallError('');
     updateCallState('calling');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS);
+      const stream = await requestCallMedia();
       localStreamRef.current = stream;
       setLocalStream(stream);
       const connection = await createPeerConnection(stream);
@@ -170,7 +189,7 @@ export default function App() {
       send({ type: 'call-signal', signal: { type: 'offer', description: connection.localDescription } });
     } catch (error) {
       stopCall(false);
-      setCallError(error.name === 'NotAllowedError' ? 'Allow camera and microphone access to start a call.' : 'Could not start the video call.');
+      setCallError(getCallMediaErrorMessage(error, 'start the call'));
     }
   };
 
@@ -178,7 +197,7 @@ export default function App() {
     if (!incomingCall) return;
     updateCallState('connecting');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS);
+      const stream = await requestCallMedia();
       localStreamRef.current = stream;
       setLocalStream(stream);
       const connection = await createPeerConnection(stream);
@@ -190,7 +209,7 @@ export default function App() {
       setIncomingCall(null);
     } catch (error) {
       stopCall(true);
-      setCallError(error.name === 'NotAllowedError' ? 'Allow camera and microphone access to accept the call.' : 'Could not join the video call.');
+      setCallError(getCallMediaErrorMessage(error, 'join the call'));
     }
   };
 
