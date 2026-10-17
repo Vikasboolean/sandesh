@@ -1,4 +1,4 @@
-export default function ChatHeader({ roomCode, onlineUsers, currentUser, connected, onLeave }) {
+export default function ChatHeader({ roomCode, onlineUsers, currentUser, connected, callState, onStartCall, onLeave }) {
   return (
     <header className="chat-header">
       <div className="brand-mark">♥</div>
@@ -17,6 +17,7 @@ export default function ChatHeader({ roomCode, onlineUsers, currentUser, connect
       <div className={`connection-state ${connected ? 'is-connected' : ''}`}>
         <span className="status-dot" /> {connected ? 'Connected' : 'Reconnecting'}
       </div>
+      <button className="video-call-button" onClick={onStartCall} disabled={!connected || onlineUsers.length !== 2 || callState !== 'idle'} title="Start a video call">Video call</button>
       <button className="leave-button" onClick={onLeave} title="Leave this room">Leave</button>
     </header>
   );

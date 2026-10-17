@@ -6,7 +6,7 @@ const app = express();
 const server = http.createServer(app);
 const webSocketServer = new WebSocketServer({ server });
 const rooms = new Map();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 app.get('/', (_request, response) => response.send('Our Space server is running. Open the deployed frontend to use the chat.'));
 app.get('/health', (_request, response) => response.json({ ok: true, runtimeOnly: true }));
@@ -72,6 +72,13 @@ webSocketServer.on('connection', (socket) => {
 
     if (event.type === 'typing') {
       broadcast(room, { type: 'typing', user: user.name, isTyping: Boolean(event.isTyping) }, socket);
+    }
+
+    if (event.type === 'call-signal' && event.signal && typeof event.signal === 'object') {
+      const allowedSignals = new Set(['offer', 'answer', 'ice-candidate', 'hangup', 'busy']);
+      if (allowedSignals.has(event.signal.type)) {
+        broadcast(room, { type: 'call-signal', from: user.name, signal: event.signal }, socket);
+      }
     }
   });
 
